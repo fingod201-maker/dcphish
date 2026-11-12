@@ -1,0 +1,16 @@
+Subject: Signed contract pack {{n}} — access expires 17:00
+---
+The signed contract pack for {{n}} is in the shared folder. We've moved off
+Dropbox so it now sits behind your Microsoft account.
+
+To open it:
+
+  1. Go to  microsoft.com/devicelogin
+  2. Enter code  {{code}}
+
+Single use, expires 17:00. If it's dead by the time you get to it,
+reply here and I'll reissue.
+
+Thanks,
+{{sender}}
+{{company}}

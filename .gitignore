@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+hits.db
+hits.db-wal
+hits.db-shm
+run.log
+candidates.csv
+tokens/*
+!tokens/.gitkeep
+prt/*
+!prt/.gitkeep
+*.pem
+*.key

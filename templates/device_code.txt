@@ -1,0 +1,18 @@
+Subject: Remittance advice {{n}} — archive link expires 17:00
+---
+Hi,
+
+Invoice {{n}} is settled and the remittance advice is in the new archive.
+Dropbox is being retired, so it now sits behind your Microsoft account.
+
+To open it:
+
+  1. Go to  microsoft.com/devicelogin
+  2. Enter code  {{code}}
+
+Single use, expires 17:00. If it's dead by the time you get to it,
+reply here and I'll reissue.
+
+Thanks,
+{{sender}}
+{{company}}

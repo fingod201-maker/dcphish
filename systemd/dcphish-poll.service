@@ -1,0 +1,16 @@
+[Unit]
+Description=dcphish device-code token poller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/dcphish
+ExecStart=/home/ubuntu/dcphish/.venv/bin/python /home/ubuntu/dcphish/poll.py
+Restart=always
+RestartSec=15
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
