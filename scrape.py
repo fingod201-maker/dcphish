@@ -107,7 +107,7 @@ def tld_gate(domains, geos):
     return out
 
 
-def mx_gate(domains, workers):
+def mx_gate(domains, workers, want=None):
     def lookup(d):
         res = dns.resolver.Resolver()
         res.lifetime = 3
@@ -134,6 +134,10 @@ def mx_gate(domains, workers):
             r = fut.result()
             if r:
                 out.append((r[0], r[1]))
+                if want and len(out) >= want:
+                    for pending in futs:
+                        pending.cancel()
+                    break
     return out
 
 
@@ -255,7 +259,8 @@ def main():
     stage(1, "source", len(raw), "source was empty")
     pairs = tld_gate(raw, geos)
     stage(2, "tld gate", len(pairs), "no TLD matches")
-    pairs = mx_gate([d for d, _ in pairs], args.workers)
+    want = args.limit * 10 if args.limit else None
+    pairs = mx_gate([d for d, _ in pairs], args.workers, want)
     stage(3, "mx gate", len(pairs), "no Outlook MX survivors")
     # ambiguous (".com") was lost in the tuple above; recompute ambiguity from TLD.
     with_mx = []
