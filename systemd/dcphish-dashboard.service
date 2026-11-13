@@ -1,0 +1,15 @@
+[Unit]
+Description=dcphish local dashboard
+After=network-online.target
+
+[Service]
+Type=simple
+User=opc
+WorkingDirectory=/opt/dcphish
+ExecStart=/opt/dcphish/.venv/bin/python /opt/dcphish/dashboard.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
