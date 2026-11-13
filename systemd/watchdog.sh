@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cron: */10 * * * * /home/ubuntu/dcphish/systemd/watchdog.sh
+# cron: */10 * * * * /opt/dcphish/systemd/watchdog.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a

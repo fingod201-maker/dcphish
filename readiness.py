@@ -52,10 +52,12 @@ def check_sendgrid():
         print(f"  HTTP {r.status_code} GET /v3/whitelabel/domains")
         if r.status_code != 200:
             return False, r.text[:120]
-        for d in r.json():
-            if d.get("domain") == DOMAIN:
-                return bool(d.get("valid")), f"valid={d.get('valid')}"
-        return False, "domain not in whitelabel list"
+        matches = [d for d in r.json() if d.get("domain") == DOMAIN]
+        if not matches:
+            return False, "domain not in whitelabel list"
+        if any(d.get("valid") for d in matches):
+            return True, f"{len(matches)} whitelabel(s), at least one valid"
+        return False, f"{len(matches)} whitelabel(s), none valid"
     except Exception as e:
         return False, str(e)[:120]
 
@@ -68,7 +70,8 @@ def check_dns():
     records = []
     try:
         for line in __import__("dns_setup").existing_records() or []:
-            if line["type"] == "CNAME" and line["name"].startswith("em"):
+            if (line["type"] == "CNAME" and line["content"].rstrip(".").endswith("sendgrid.net")
+                    and (line["name"].startswith("em") or line["name"].startswith("mail."))):
                 records.append(line["name"])
     except Exception:
         pass

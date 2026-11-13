@@ -63,14 +63,17 @@ def existing_records():
 
 def desired_records():
     em = f"em{random.randint(100000, 999999)}"
-    dkim_target = (
-        f"sendgrid.domainkey.{DKIM}.sendgrid.net" if DKIM else
-        "sendgrid.domainkey.PLACEHOLDER.sendgrid.net"
-    )
+    if DKIM:
+        em_target = f"{DKIM}.sendgrid.net"
+        dkim1 = f"s1.domainkey.{DKIM}.sendgrid.net"
+        dkim2 = f"s2.domainkey.{DKIM}.sendgrid.net"
+    else:
+        em_target = "sendgrid.net"
+        dkim1 = dkim2 = "sendgrid.domainkey.PLACEHOLDER.sendgrid.net"
     return [
-        {"type": "CNAME", "name": em, "content": "sendgrid.net", "proxied": False, "ttl": 1},
-        {"type": "CNAME", "name": "s1._domainkey", "content": dkim_target, "proxied": False, "ttl": 1},
-        {"type": "CNAME", "name": "s2._domainkey", "content": dkim_target, "proxied": False, "ttl": 1},
+        {"type": "CNAME", "name": em, "content": em_target, "proxied": False, "ttl": 1},
+        {"type": "CNAME", "name": "s1._domainkey", "content": dkim1, "proxied": False, "ttl": 1},
+        {"type": "CNAME", "name": "s2._domainkey", "content": dkim2, "proxied": False, "ttl": 1},
         {"type": "TXT", "name": "@", "content": "v=spf1 include:sendgrid.net -all", "proxied": False, "ttl": 1},
         {"type": "TXT", "name": "_dmarc", "content": f"v=DMARC1; p=none; rua=mailto:dmarc@{DOMAIN}; adkim=s; aspf=s", "proxied": False, "ttl": 1},
         {"type": "A", "name": LINK_DOMAIN, "content": VM_IP, "proxied": False, "ttl": 1},
@@ -93,10 +96,13 @@ def apply():
     if have is None:
         return 1
     wanted = desired_records()
-    # Re-use an em* CNAME if it already exists so re-running does not proliferate.
+    # Re-use the live SendGrid mail CNAME (usually "mail") so re-runs do not
+    # proliferate em* records.
     for r in have:
-        if r["type"] == "CNAME" and r["name"].startswith("em") and r["content"].rstrip(".") == "sendgrid.net":
+        if (r["type"] == "CNAME" and r["content"].rstrip(".").endswith("sendgrid.net")
+                and (r["name"].startswith("em") or r["name"].startswith("mail."))):
             wanted[0]["name"] = r["name"].split(".")[0]
+            wanted[0]["content"] = r["content"].rstrip(".")
             break
     for rec in wanted:
         fqdn = full_name(rec["name"])
@@ -155,7 +161,8 @@ def check():
     rows.append(("CNAME s2._domainkey", *check_cname(f"s2._domainkey.{DOMAIN}")))
     ems = []
     for rec in existing_records() or []:
-        if rec["type"] == "CNAME" and rec["name"].startswith("em"):
+        if (rec["type"] == "CNAME" and rec["content"].rstrip(".").endswith("sendgrid.net")
+                and (rec["name"].startswith("em") or rec["name"].startswith("mail."))):
             ems.append(rec["name"])
     if not ems:
         rows.append(("CNAME em*", False, "no em* CNAME found"))

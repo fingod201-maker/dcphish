@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/dcphish
-ExecStart=/home/ubuntu/dcphish/.venv/bin/python /home/ubuntu/dcphish/poll.py
+User=opc
+WorkingDirectory=/opt/dcphish
+ExecStart=/opt/dcphish/.venv/bin/python /opt/dcphish/poll.py
 Restart=always
 RestartSec=15
 Environment=PYTHONUNBUFFERED=1
