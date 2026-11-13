@@ -116,11 +116,11 @@ def check_dirs():
         path = os.path.join(HERE, d)
         os.makedirs(path, exist_ok=True)
         try:
-            os.chmod(path, 0o600 if os.name != "nt" else stat.S_IREAD | stat.S_IWRITE)
+            os.chmod(path, 0o700 if os.name != "nt" else stat.S_IREAD | stat.S_IWRITE)
         except OSError:
             pass
         if os.name != "nt":
-            ok = ok and (stat.S_IMODE(os.stat(path).st_mode) == 0o600)
+            ok = ok and (stat.S_IMODE(os.stat(path).st_mode) == 0o700)
         ok = ok and os.path.isdir(path) and os.access(path, os.W_OK)
     return ok, "tokens/ prt/"
 
@@ -173,7 +173,7 @@ def main():
     record("SendGrid domain authenticated", *check_sendgrid())
     record("SPF/DKIM/DMARC + link not proxied", *check_dns())
     record("Telegram getMe + test send", *check_telegram())
-    record("tokens/ prt/ mode 0600", *check_dirs())
+    record("tokens/ prt/ mode 0700", *check_dirs())
     record("disk free > 5 GB", *check_disk())
     record("roadtx device -h exits 0", *check_roadtx())
     record("live device code generates", *check_device_code())

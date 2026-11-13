@@ -187,7 +187,10 @@ def main():
     os.makedirs(TOKENS, exist_ok=True)
     os.makedirs(PRT, exist_ok=True)
     for d in (TOKENS, PRT):
-        chmod600(d)
+        try:
+            os.chmod(d, 0o700)
+        except OSError:
+            pass
     db.init_db()
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
